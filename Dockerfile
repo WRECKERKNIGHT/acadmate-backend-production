@@ -1,57 +1,48 @@
-# Use Node.js LTS Debian-based image
-FROM node:18-slim
+# Use Node.js LTS version
+FROM node:18-alpine
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl bash git python3 make g++
 
-# Copy package.json and package-lock.json
+# Copy package files
 COPY package*.json ./
-
-# Install ALL dependencies (dev + prod)
-RUN npm ci
-
-# Add node_modules/.bin to PATH (ensure tsc & prisma are executable)
-ENV PATH=/app/node_modules/.bin:$PATH
-
-# Copy Prisma schema folder
 COPY prisma ./prisma/
 
-# Generate Prisma client BEFORE copying full source
-RUN npx prisma generate --schema=./prisma/schema.prisma
+# Install dependencies (including dev for tsc)
+RUN npm install
 
-# Copy all source code
+# Copy source code
 COPY . .
 
-# Make node_modules binaries executable
-RUN chmod -R +x node_modules/.bin
+# Generate Prisma client
+RUN npx prisma generate --schema=prisma/schema.prisma
 
-# Build TypeScript project
+# Build TypeScript
 RUN npm run build
 
-# Remove devDependencies to slim image (optional)
+# Remove devDependencies for slimmer image
 RUN npm prune --production
 
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Create non-root user and set ownership
-RUN groupadd -g 1001 nodejs && \
-    useradd -r -u 1001 -g nodejs nodejs && \
-    chown -R nodejs:nodejs /app
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
 
-# Switch to non-root user
+# Change ownership
+RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 # Expose port
-ENV PORT=5000
 EXPOSE 5000
 
-# Healthcheck for Render
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:$PORT/health || exit 1
+  CMD curl -f http://localhost:5000/health || exit 1
 
-# Start application
+# Start app
 CMD ["npm", "start"]
