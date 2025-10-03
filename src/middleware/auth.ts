@@ -1,3 +1,22 @@
+import { Request, Response, NextFunction } from "express";
+
+// Extend Express Request with user info
+export interface AuthRequest extends Request {
+  user?: {
+    uid: string;
+    role: string;
+    batchType?: string;
+    id: string;
+  };
+}
+
+// Example auth middleware
+export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Your authentication logic
+  next();
+};
+
+
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 
