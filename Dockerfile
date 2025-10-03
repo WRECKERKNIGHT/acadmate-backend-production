@@ -7,25 +7,25 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
 
-# Copy package files first for caching
+# Copy package files for caching
 COPY package*.json ./
 
-# Install all dependencies including devDependencies (needed for Prisma and TypeScript)
+# Install all dependencies including devDependencies (needed for TypeScript)
 RUN npm ci
 
-# Ensure node_modules/.bin is in PATH
+# Add local binaries to PATH so tsc is executable
 ENV PATH=/app/node_modules/.bin:$PATH
 
 # Copy Prisma schema folder
 COPY prisma ./prisma/
 
-# Generate Prisma client safely
+# Generate Prisma client
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Copy the rest of the source code
 COPY . .
 
-# Build TypeScript project BEFORE pruning devDependencies
+# Build TypeScript project BEFORE removing devDependencies
 RUN npm run build
 
 # Remove devDependencies to slim the image
