@@ -1,38 +1,40 @@
-# Use Node.js LTS version
-FROM node:18-alpine
+# Use Node.js LTS Debian-based image
+FROM node:18-slim
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache curl
+RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
+# Copy package files first for caching
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev for Prisma)
+RUN npm ci
 
-# Copy source code
+# Generate Prisma client with proper permissions
+RUN npx prisma generate --schema=prisma/schema.prisma --no-install --unsafe-perm
+
+# Remove devDependencies to slim image
+RUN npm prune --production
+
+# Copy rest of the source code
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate --unsafe-perm
-
-
-# Build the application
+# Build the TypeScript project
 RUN npm run build
 
 # Create uploads directory
 RUN mkdir -p uploads
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs && \
+    useradd -r -u 1001 -g nodejs nodejs && \
+    chown -R nodejs:nodejs /app
 
-# Change ownership of app directory
-RUN chown -R nodejs:nodejs /app
+# Switch to non-root user
 USER nodejs
 
 # Expose port
