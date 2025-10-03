@@ -10,28 +10,28 @@ RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies)
+# Install ALL dependencies (dev + prod)
 RUN npm ci
 
-# Ensure local binaries are executable
+# Add node_modules/.bin to PATH (ensure tsc & prisma are executable)
 ENV PATH=/app/node_modules/.bin:$PATH
 
-# Copy Prisma folder
+# Copy Prisma schema folder
 COPY prisma ./prisma/
 
-# Generate Prisma client
+# Generate Prisma client BEFORE copying full source
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Copy all source code
 COPY . .
 
-# Ensure node_modules binaries have execute permission
+# Make node_modules binaries executable
 RUN chmod -R +x node_modules/.bin
 
-# Build TypeScript BEFORE removing devDependencies
+# Build TypeScript project
 RUN npm run build
 
-# Remove devDependencies to slim image
+# Remove devDependencies to slim image (optional)
 RUN npm prune --production
 
 # Create uploads directory
@@ -45,13 +45,13 @@ RUN groupadd -g 1001 nodejs && \
 # Switch to non-root user
 USER nodejs
 
-# Expose port for Render
+# Expose port
 ENV PORT=5000
 EXPOSE 5000
 
-# Healthcheck
+# Healthcheck for Render
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:$PORT/health || exit 1
 
-# Start app
+# Start application
 CMD ["npm", "start"]
