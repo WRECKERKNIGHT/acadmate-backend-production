@@ -13,6 +13,9 @@ COPY package*.json ./
 # Install all dependencies including devDependencies (needed for Prisma and TypeScript)
 RUN npm ci
 
+# Ensure node_modules/.bin is in PATH
+ENV PATH=/app/node_modules/.bin:$PATH
+
 # Copy Prisma schema folder
 COPY prisma ./prisma/
 
