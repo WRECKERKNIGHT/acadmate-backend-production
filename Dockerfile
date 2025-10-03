@@ -18,7 +18,8 @@ RUN npm ci --only=production
 COPY . .
 
 # Generate Prisma client
-RUN npx prisma generate
+RUN npx prisma generate --unsafe-perm
+
 
 # Build the application
 RUN npm run build
