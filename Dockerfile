@@ -1,4 +1,4 @@
-# Use Node.js LTS Debian-based image for better compatibility
+# Use Node.js LTS Debian-based image
 FROM node:18-slim
 
 # Set working directory
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
 # Copy package files first for caching
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies for Prisma)
+# Install all dependencies including devDependencies (needed for Prisma and TypeScript)
 RUN npm ci
 
 # Copy Prisma schema folder
@@ -19,19 +19,19 @@ COPY prisma ./prisma/
 # Generate Prisma client safely
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
-# Remove devDependencies to slim image
-RUN npm prune --production
-
 # Copy the rest of the source code
 COPY . .
 
-# Build TypeScript project
+# Build TypeScript project BEFORE pruning devDependencies
 RUN npm run build
+
+# Remove devDependencies to slim the image
+RUN npm prune --production
 
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Create a non-root user and assign ownership
+# Create a non-root user and set ownership
 RUN groupadd -g 1001 nodejs && \
     useradd -r -u 1001 -g nodejs nodejs && \
     chown -R nodejs:nodejs /app
