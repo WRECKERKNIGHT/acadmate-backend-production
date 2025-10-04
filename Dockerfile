@@ -4,45 +4,43 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache curl bash git python3 make g++
+# Install system dependencies and set proper shell
+RUN apk add --no-cache curl bash git python3 make g++ dumb-init
 
-# Copy package files
+# Create non-root user early
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+# Copy package files as root
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (including dev for tsc)
-RUN npm install
+# Install dependencies as root
+RUN npm ci --only=production --silent
+RUN npm install typescript @prisma/client prisma --save-dev --silent
 
 # Copy source code
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate --schema=prisma/schema.prisma
+# Generate Prisma client with explicit binary targets
+RUN npx prisma generate
 
 # Build TypeScript
 RUN npm run build
 
-# Remove devDependencies for slimmer image
-RUN npm prune --production
+# Create necessary directories
+RUN mkdir -p uploads dist
 
-# Create uploads directory
-RUN mkdir -p uploads
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership
+# Change ownership of everything to nodejs user
 RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
 USER nodejs
 
 # Expose port
-EXPOSE 5000
+EXPOSE 10000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start app
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]
