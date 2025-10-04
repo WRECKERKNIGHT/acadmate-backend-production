@@ -5,23 +5,26 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl bash git python3 make g++
 
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including dev for tsc)
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Generate Prisma client
-RUN npx prisma generate
+RUN npx prisma generate --schema=prisma/schema.prisma
 
-# Build the application
+# Build TypeScript
 RUN npm run build
+
+# Remove devDependencies for slimmer image
+RUN npm prune --production
 
 # Create uploads directory
 RUN mkdir -p uploads
@@ -30,16 +33,16 @@ RUN mkdir -p uploads
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Change ownership of app directory
+# Change ownership
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 # Expose port
 EXPOSE 5000
 
-# Health check
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:5000/health || exit 1
 
-# Start the application
+# Start app
 CMD ["npm", "start"]
