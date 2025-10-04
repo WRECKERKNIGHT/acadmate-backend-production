@@ -447,6 +447,12 @@ export const getStudentHomeworkSubmissions = async (req: Request, res: Response)
       whereClause.status = status as HomeworkStatus;
     }
 
+    if (subject) {
+      whereClause.homework = {
+        subject: subject as string
+      };
+    }
+
     const submissions = await prisma.homeworkSubmission.findMany({
       where: whereClause,
       include: {
@@ -463,8 +469,7 @@ export const getStudentHomeworkSubmissions = async (req: Request, res: Response)
                 fullName: true
               }
             }
-          },
-          where: subject ? { subject: subject as string } : {}
+          }
         }
       },
       orderBy: {

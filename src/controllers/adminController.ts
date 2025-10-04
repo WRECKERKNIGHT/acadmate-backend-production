@@ -101,7 +101,14 @@ export const getUserDetails = async (req: Request, res: Response) => {
             score: true,
             percentage: true,
             submittedAt: true,
-            test: { select: { title: true, subject: true } }
+            test: { 
+              select: { 
+                title: true,
+                class: {
+                  select: { subject: true }
+                }
+              }
+            }
           },
           take: 5,
           orderBy: { submittedAt: 'desc' }

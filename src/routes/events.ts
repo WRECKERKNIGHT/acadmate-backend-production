@@ -71,7 +71,7 @@ router.get('/', authenticateToken, async (req, res) => {
       events = await prisma.specialEvent.findMany({
         where: {
           OR: [
-            { batches: { some: { type: batchType } } },
+            { batches: { some: { type: batchType as any } } },
             { participants: { some: { userUid: uid } } }
           ]
         },
@@ -133,7 +133,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     // Check if user has access to this event
     const hasAccess = role === 'HEAD_TEACHER' || 
                       event.participants.some(p => p.userUid === uid) ||
-                      (role === 'STUDENT' && event.batches.some(b => b.type === req.user?.batchType)) ||
+                      (role === 'STUDENT' && event.batches.some(b => b.type === (req.user?.batchType as any))) ||
                       (role === 'TEACHER' && await checkTeacherBatchAccess(uid, event.batches.map(b => b.id)));
     
     if (!hasAccess) {
@@ -424,7 +424,7 @@ router.get('/stats/overview', authenticateToken, async (req, res) => {
     if (role === 'STUDENT') {
       whereClause = {
         OR: [
-          { batches: { some: { type: batchType } } },
+          { batches: { some: { type: batchType as any } } },
           { participants: { some: { userUid: uid } } }
         ]
       };

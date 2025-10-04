@@ -6,16 +6,18 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "build": "tsc -p tsconfig.json",
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "postinstall": "prisma generate",
     "seed": "tsx src/seed/acadmate-data.ts",
     "seed:batches": "tsx src/scripts/seedBatches.ts",
     "seed:questions": "tsx src/scripts/seedSampleQuestions.ts",
     "seed:all": "npm run seed && npm run seed:batches && npm run seed:questions",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:reset": "prisma migrate reset",
     "deploy:setup": "node scripts/deploy.js",
-    "postbuild": "npm run db:generate",
+    "prepare:deploy": "node prepare-deployment.js",
     "railway:deploy": "npm run build && npm run deploy:setup"
   },
   "dependencies": {

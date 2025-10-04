@@ -6,6 +6,8 @@ export interface AuthRequest extends Request {
     role: string
     batchType?: string
     id: string
+    fullName?: string
+    userId: string
   }
 }
 
@@ -14,4 +16,6 @@ export interface UserPayload {
   role: string
   batchType?: string
   id: string
+  fullName?: string
+  userId: string
 }

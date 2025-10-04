@@ -8,6 +8,8 @@ declare global {
         role: string
         batchType?: string
         id: string
+        fullName?: string
+        userId: string // Required for destructuring compatibility
       }
     }
   }
