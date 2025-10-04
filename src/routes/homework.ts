@@ -1,6 +1,6 @@
 import express from 'express';
-import { auth } from '../middleware/auth';
-import homeworkController, { upload } from '../controllers/homeworkController';
+import { auth } from "../middleware/auth.js";
+import homeworkController, { upload } from "../controllers/homeworkController.js";
 
 const router = express.Router();
 

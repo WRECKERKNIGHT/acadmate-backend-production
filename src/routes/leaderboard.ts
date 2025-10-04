@@ -1,6 +1,6 @@
 import express from 'express';
-import { auth } from '../middleware/auth.js';
-import * as leaderboardController from '../controllers/leaderboardController.js';
+import { auth } from "../middleware/auth.js";
+import * as leaderboardController from "../controllers/leaderboardController.js";
 
 const router = express.Router();
 

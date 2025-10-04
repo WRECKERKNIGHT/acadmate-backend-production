@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ export const getMonthlyLeaderboard = async (req: Request, res: Response) => {
     const startDate = new Date(`${month}-01`)
     const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0)
     
-    let whereClause = {
+    let whereClause: any = {
       createdAt: {
         gte: startDate,
         lte: endDate
@@ -20,7 +20,7 @@ export const getMonthlyLeaderboard = async (req: Request, res: Response) => {
     }
     
     if (batch) {
-      whereClause.user = {
+      whereClause.student = {
         batchType: batch
       }
     }
@@ -29,7 +29,7 @@ export const getMonthlyLeaderboard = async (req: Request, res: Response) => {
     const submissions = await prisma.submission.findMany({
       where: whereClause,
       include: {
-        user: {
+        student: {
           select: {
             id: true,
             uid: true,
@@ -46,17 +46,17 @@ export const getMonthlyLeaderboard = async (req: Request, res: Response) => {
     })
 
     // Calculate user statistics
-    const userStats = {}
+    const userStats: any = {}
     
     submissions.forEach(submission => {
-      const userId = submission.userId
+      const userId = submission.studentId
       const percentage = submission.test.totalMarks > 0 
         ? Math.round((submission.score / submission.test.totalMarks) * 100)
         : 0
       
       if (!userStats[userId]) {
         userStats[userId] = {
-          user: submission.user,
+          user: submission.student,
           scores: [],
           totalTests: 0,
           totalScore: 0,
@@ -88,7 +88,7 @@ export const getMonthlyLeaderboard = async (req: Request, res: Response) => {
       
       const prevSubmissions = await prisma.submission.findMany({
         where: {
-          userId: userId,
+          studentId: userId,
           createdAt: {
             gte: prevMonth,
             lte: prevMonthEnd
@@ -162,9 +162,10 @@ export const getTestLeaderboards = async (req: Request, res: Response) => {
     const { batch, limit = 5 } = req.query
     
     // Get recent tests
-    let whereClause = {}
+    let whereClause: any = {}
     if (batch) {
-      whereClause.createdBy = {
+      // Note: Tests don't have direct batch filtering, using author relationship
+      whereClause.author = {
         batchType: batch
       }
     }
@@ -172,11 +173,11 @@ export const getTestLeaderboards = async (req: Request, res: Response) => {
     const recentTests = await prisma.test.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
-      take: parseInt(limit),
+      take: parseInt(limit as string),
       include: {
         submissions: {
           include: {
-            user: {
+            student: {
               select: {
                 id: true,
                 uid: true,
@@ -198,8 +199,8 @@ export const getTestLeaderboards = async (req: Request, res: Response) => {
         
         return {
           id: submission.id,
-          userId: submission.userId,
-          user: submission.user,
+          userId: submission.studentId,
+          user: submission.student,
           rank: index + 1,
           score: submission.score,
           totalTests: 1, // Individual test
@@ -238,9 +239,9 @@ export const getOverallLeaderboard = async (req: Request, res: Response) => {
   try {
     const { batch } = req.query
     
-    let whereClause = {}
+    let whereClause: any = {}
     if (batch) {
-      whereClause.user = {
+      whereClause.student = {
         batchType: batch
       }
     }
@@ -249,7 +250,7 @@ export const getOverallLeaderboard = async (req: Request, res: Response) => {
     const submissions = await prisma.submission.findMany({
       where: whereClause,
       include: {
-        user: {
+        student: {
           select: {
             id: true,
             uid: true,
@@ -266,17 +267,17 @@ export const getOverallLeaderboard = async (req: Request, res: Response) => {
     })
 
     // Calculate comprehensive user statistics
-    const userStats = {}
+    const userStats: any = {}
     
     submissions.forEach(submission => {
-      const userId = submission.userId
+      const userId = submission.studentId
       const percentage = submission.test.totalMarks > 0 
         ? Math.round((submission.score / submission.test.totalMarks) * 100)
         : 0
       
       if (!userStats[userId]) {
         userStats[userId] = {
-          user: submission.user,
+          user: submission.student,
           scores: [],
           totalTests: 0,
           totalScore: 0,
@@ -389,7 +390,7 @@ export const getUserLeaderboardStats = async (req: Request, res: Response) => {
     // Get user's submissions in timeframe
     const userSubmissions = await prisma.submission.findMany({
       where: {
-        userId: userId,
+        studentId: userId,
         createdAt: {
           gte: startDate,
           lte: endDate
@@ -397,7 +398,7 @@ export const getUserLeaderboardStats = async (req: Request, res: Response) => {
       },
       include: {
         test: { select: { totalMarks: true } },
-        user: { select: { batchType: true } }
+        student: { select: { batchType: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -413,7 +414,7 @@ export const getUserLeaderboardStats = async (req: Request, res: Response) => {
       : 0
     
     // Get user's rank in their batch
-    const batchType = userSubmissions[0]?.user.batchType
+    const batchType = userSubmissions[0]?.student.batchType
     let batchRank = 0
     let totalInBatch = 0
     
@@ -421,17 +422,17 @@ export const getUserLeaderboardStats = async (req: Request, res: Response) => {
       // This is a simplified ranking calculation
       // In production, you'd want to use the same logic as the leaderboard endpoints
       const batchSubmissions = await prisma.submission.groupBy({
-        by: ['userId'],
+        by: ['studentId'],
         where: {
           createdAt: { gte: startDate, lte: endDate },
-          user: { batchType: batchType }
+          student: { batchType: batchType }
         },
         _avg: { score: true },
         _count: { id: true }
       })
       
       totalInBatch = batchSubmissions.length
-      const userAvgScore = batchSubmissions.find(s => s.userId === userId)?._avg.score || 0
+      const userAvgScore = batchSubmissions.find(s => s.studentId === userId)?._avg.score || 0
       batchRank = batchSubmissions.filter(s => (s._avg.score || 0) > userAvgScore).length + 1
     }
     
